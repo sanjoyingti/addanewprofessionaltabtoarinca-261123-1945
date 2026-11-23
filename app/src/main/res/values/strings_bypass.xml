@@ -1,0 +1,6 @@
+=== ABOUT: The one extra label the crash watcher needs ===
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_label">Arin Bypass crash watcher</string>
+</resources>

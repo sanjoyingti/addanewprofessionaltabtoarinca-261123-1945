@@ -1,5 +1,7 @@
+=== ABOUT: Lists the app folders that may be shared out (logs and reports) ===
+```xml
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <files-path name="bypass" path="bypass/" />
-    <cache-path name="cache" path="." />
+    <files-path name="bypass_exports" path="bypass/exports/" />
+    <files-path name="bypass_files" path="bypass/" />
 </paths>
