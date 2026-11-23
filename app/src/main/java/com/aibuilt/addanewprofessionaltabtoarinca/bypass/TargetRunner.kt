@@ -1,5 +1,3 @@
-=== ABOUT: Runs exactly the one path the person picked, after the integrity sweep, and turns the one-click tools into previews ===
-```kotlin
 package com.aibuilt.addanewprofessionaltabtoarinca.bypass
 
 import kotlinx.coroutines.Dispatchers
@@ -35,11 +33,10 @@ class TargetRunner(
 
             if (!project.integritySwept && target != BypassTarget.SIGNATURE_CHECK) {
                 notes.add("Integrity sweep ran first so a pin or a signature mismatch cannot fake the result.")
-                val apk = File(project.id.let { File(root.parentFile, it).absolutePath })
-                val sweep = integrity.sweep(root, File("${root.absolutePath}/../pristine/base.apk"))
+                val pristineApk = File(File(root.parentFile, "pristine"), "base.apk")
+                val sweep = integrity.sweep(root, pristineApk)
                 previews.addAll(sweep.previews)
                 notes.addAll(sweep.notes)
-                if (!apk.exists()) notes.add("")
             } else if (target == BypassTarget.SIGNATURE_CHECK) {
                 previews.add(integrity.neuterSignatureChecks(root))
             }
@@ -74,7 +71,7 @@ class TargetRunner(
                     } else {
                         val inventory = patcher.endpointInventory(root)
                         val hosts = inventory.mapNotNull { hit -> runCatching { java.net.URI(hit.text).host }.getOrNull() }
-                            .filterNotNull().distinct()
+                            .distinct()
                         if (hosts.isEmpty()) notes.add("No absolute endpoint host found to swap.")
                         hosts.forEach { host ->
                             previews.add(patcher.bulkReplace(root, host, swap, includeDex = true))
@@ -136,5 +133,5 @@ class TargetRunner(
         }
 
     suspend fun adSdkClasses(root: File): List<String> =
-        withContext(Dispatchers.IO) { patcher.findUsages(root, adWords, 200).map { it.relPath }.distinct() }
+        withContext(Dispatchers.IO) { patcher.findUsages(root, "loadAd(", 200).map { it.relPath }.distinct() }
 }
