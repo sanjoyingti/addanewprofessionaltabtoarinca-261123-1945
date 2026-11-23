@@ -1,0 +1,8 @@
+=== ABOUT: The window styling used before the app's colours load (dark) ===
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Arin" parent="android:Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>
