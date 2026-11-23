@@ -1,5 +1,3 @@
-=== ABOUT: Keeps every project, log, traffic capture and rule pack on disk so work survives closing the app ===
-```kotlin
 package com.aibuilt.addanewprofessionaltabtoarinca.bypass
 
 import android.content.Context
@@ -47,6 +45,9 @@ class BypassStore(context: Context) {
 
     /** Decoded / patched working tree. */
     fun workDir(id: String): File = File(projectDir(id), "work").apply { mkdirs() }
+
+    /** JADX Java view output. */
+    fun javaDir(id: String): File = File(projectDir(id), "java").apply { mkdirs() }
 
     fun reportsDir(id: String): File = File(projectDir(id), "reports").apply { mkdirs() }
 

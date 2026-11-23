@@ -1,5 +1,3 @@
-=== ABOUT: Adds the missing project settings the requirements ask for: dry run on by default, traffic capture, offline proof and an optional custom keystore ===
-```kotlin
 package com.aibuilt.addanewprofessionaltabtoarinca.bypass
 
 import kotlinx.serialization.Serializable

@@ -1,5 +1,3 @@
-=== ABOUT: The patch diary: copies each file before it is touched, so any single patch or the whole lot can be undone ===
-```kotlin
 package com.aibuilt.addanewprofessionaltabtoarinca.bypass
 
 import kotlinx.serialization.Serializable
@@ -91,7 +89,7 @@ class Ledger(private val dir: File) {
     }
 
     fun revertAll(root: File) {
-        entries().forEach { revert(root, it.id) }
+        entries().toList().forEach { revert(root, it.id) }
         write(emptyList())
     }
 }

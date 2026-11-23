@@ -1,5 +1,3 @@
-=== ABOUT: Takes in an APK, split bundle or installed app and keeps an untouched copy plus a warning about missing splits ===
-```kotlin
 package com.aibuilt.addanewprofessionaltabtoarinca.bypass
 
 import android.content.Context
@@ -68,6 +66,7 @@ class ApkIntake(private val context: Context) {
         withContext(Dispatchers.IO) {
             val src = File(app.apkPath)
             if (!src.isFile) return@withContext IntakeResult(false, message = "APK file not readable: ${app.apkPath}")
+            pristineDir.mkdirs()
             val splits = installedSplits(app.packageName).filter { File(it).isFile }
             copyTo(src, File(pristineDir, "base.apk"))
             splits.forEach { copyTo(File(it), File(pristineDir, File(it).name)) }
@@ -105,11 +104,14 @@ class ApkIntake(private val context: Context) {
                 val base = File(pristineDir, "base.apk")
                 incoming.renameTo(base)
                 val pkg = packageNameOf(base)
+                val (vName, vCode) = versionInfo(base)
                 return@withContext IntakeResult(
                     ok = true,
                     baseApk = base,
                     hash = hash(base),
                     packageName = pkg,
+                    versionName = vName,
+                    versionCode = vCode,
                     message = "Imported base.apk"
                 )
             }
@@ -142,6 +144,7 @@ class ApkIntake(private val context: Context) {
             val base = File(pristineDir, "base.apk")
             if (!base.isFile) return@withContext IntakeResult(false, message = "Bundle had no base.apk inside.")
             incoming.delete()
+            val (vName, vCode) = versionInfo(base)
             val warning = if (splits.isNotEmpty()) {
                 "The bundle carries ${splits.size} split(s) — kept for reference, but only base.apk gets patched. Missing splits can break the clone."
             } else null
@@ -151,6 +154,8 @@ class ApkIntake(private val context: Context) {
                 splits = splits.map { it.substringAfterLast('/') },
                 hash = hash(base),
                 packageName = packageNameOf(base),
+                versionName = vName,
+                versionCode = vCode,
                 warning = warning,
                 message = "Imported base.apk from bundle"
             )

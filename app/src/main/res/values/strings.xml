@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Arin</string>
-    <string name="accessibility_label">Arin Bypass round watcher</string>
+    <string name="accessibility_label">Arin Bypass crash watcher</string>
 </resources>
