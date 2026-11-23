@@ -7,7 +7,6 @@ import android.text.TextUtils
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
 
 data class WatchEvent(val pkg: String, val text: String, val className: String?)
 
@@ -25,7 +24,9 @@ class BypassAccessibilityService : AccessibilityService() {
         val builder = StringBuilder()
         event.text?.forEach { if (!TextUtils.isEmpty(it)) builder.append(it).append(' ') }
         event.contentDescription?.let { builder.append(it).append(' ') }
-        val nodeText = rootInActiveWindow?.let { collect(it, 0) }.orEmpty()
+        val nodeText = runCatching {
+            rootInActiveWindow?.let { collect(it, 0) }.orEmpty()
+        }.getOrDefault("")
         val combined = (builder.toString() + " " + nodeText).trim()
         if (combined.isBlank()) return
         val className = runCatching { event.className?.toString() }.getOrNull()
@@ -38,7 +39,7 @@ class BypassAccessibilityService : AccessibilityService() {
         node.text?.let { builder.append(it).append(' ') }
         node.contentDescription?.let { builder.append(it).append(' ') }
         for (index in 0 until minOf(node.childCount, 12)) {
-            val child = node.getChild(index) ?: continue
+            val child = runCatching { node.getChild(index) }.getOrNull() ?: continue
             builder.append(collect(child, depth + 1))
         }
         return builder.toString()
@@ -53,9 +54,6 @@ class BypassAccessibilityService : AccessibilityService() {
 
     companion object {
         val events = MutableSharedFlow<WatchEvent>(extraBufferCapacity = 64)
-            .let { flow -> flow as SharedFlow<WatchEvent> }
-
-        private val backing = MutableSharedFlow<WatchEvent>(extraBufferCapacity = 64)
 
         @Volatile
         var watchingPackage: String? = null
@@ -64,12 +62,13 @@ class BypassAccessibilityService : AccessibilityService() {
         var connected: Boolean = false
 
         fun serviceEnabled(context: Context): Boolean {
-            val enabled = Settings.Secure.getString(
-                context.contentResolver,
-                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-            ).orEmpty()
-            return enabled.contains(context.packageName + "/" + BypassAccessibilityService::class.java.name) ||
-                enabled.contains("bypass.BypassAccessibilityService")
+            val enabled = runCatching {
+                Settings.Secure.getString(
+                    context.contentResolver,
+                    Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+                ).orEmpty()
+            }.getOrDefault("")
+            return enabled.contains(BypassAccessibilityService::class.java.name)
         }
     }
 }

@@ -1,12 +1,12 @@
 package com.aibuilt.addanewprofessionaltabtoarinca.bypass
 
 import android.app.ActivityManager
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageInstaller
-import android.os.Build
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -68,11 +68,11 @@ object Installer {
                     }
                 }
                 val intent = Intent(action).setPackage(context.packageName)
-                val pending = android.app.PendingIntent.getBroadcast(
+                val pending = PendingIntent.getBroadcast(
                     context,
                     sessionId,
                     intent,
-                    android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_MUTABLE
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
                 )
                 session.commit(pending.intentSender)
             }
@@ -102,7 +102,7 @@ class RepairLoop(
     private val log: suspend (String) -> Unit
 ) {
 
-    private val crashWords = listOf("has stopped", "keeps stopping", "keeps crashing", "crash", "FATAL EXCEPTION", "nullpointer", "Exception")
+    private val crashWords = listOf("has stopped", "keeps stopping", "keeps crashing", "fatal exception", "nullpointer")
     private val anrWords = listOf("isn't responding", "isn’t responding", "not responding")
     private val paywallWords = listOf("subscribe", "subscription", "premium", "upgrade to", "free trial", "restore purchase", "paywall", "go pro")
 
@@ -230,7 +230,4 @@ class RepairLoop(
     }
 
     fun accessibilityEnabled(): Boolean = BypassAccessibilityService.connected
-
-    @Suppress("unused")
-    fun needsApi33(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
 }

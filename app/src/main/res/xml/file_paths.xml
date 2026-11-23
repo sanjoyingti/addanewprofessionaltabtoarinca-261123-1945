@@ -1,8 +1,6 @@
-=== ABOUT: Which folders Arin may hand out a share link for, so built APKs can be installed ===
-```xml
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <files-path name="files" path="." />
+    <files-path name="bypass" path="bypass/" />
+    <files-path name="bypass_root" path="." />
     <cache-path name="cache" path="." />
-    <external-files-path name="external_files" path="." />
 </paths>

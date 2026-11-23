@@ -1,5 +1,7 @@
 package com.aibuilt.addanewprofessionaltabtoarinca.bypass
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -17,9 +19,13 @@ import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
-import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.File
+import java.io.FileOutputStream
 
+/**
+ * Optional per-round screenshots. Started with the MediaProjection grant, then asked to capture.
+ * Because MediaProjection may only be re-used once per grant, a fresh grant is requested per session.
+ */
 class ScreenCaptureService : Service() {
 
     private var projection: MediaProjection? = null
@@ -32,7 +38,7 @@ class ScreenCaptureService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        notifyChannel(this, CHANNEL, "Bypass screenshots")
+        notifyChannel(this, CHANNEL, "Arin Bypass screenshots")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -83,48 +89,47 @@ class ScreenCaptureService : Service() {
     }
 
     private fun capture() {
-        val active = projection
-        if (active == null) {
+        val live = projection
+        if (live == null) {
             stopSelf()
             return
         }
         val metrics = resources.displayMetrics
         val width = metrics.widthPixels
         val height = metrics.heightPixels
+        val density = metrics.densityDpi
         val reader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
-        val display = runCatching {
-            active.createVirtualDisplay(
-                "bypass-shot", width, height, metrics.densityDpi,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, reader.surface, null, handler
-            )
-        }.getOrNull()
+        val virtualDisplay = live.createVirtualDisplay(
+            "bypass-shot",
+            width,
+            height,
+            density,
+            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+            reader.surface,
+            null,
+            handler
+        )
         handler.postDelayed({
             runCatching {
-                val image = reader.acquireLatestImage()
-                if (image != null) {
+                reader.acquireLatestImage()?.use { image ->
                     val plane = image.planes[0]
-                    val pixelStride = plane.pixelStride
-                    val rowStride = plane.rowStride
-                    val rowPadding = rowStride - pixelStride * width
-                    val padded = Bitmap.createBitmap(
-                        width + rowPadding / pixelStride,
-                        height,
-                        Bitmap.Config.ARGB_8888
-                    )
-                    padded.copyPixelsFromBuffer(plane.buffer)
-                    val cropped = Bitmap.createBitmap(padded, 0, 0, width, height)
+                    val rowPadding = plane.rowStride - plane.pixelStride * width
+                    val paddedWidth = width + rowPadding / plane.pixelStride
+                    val bitmap = Bitmap.createBitmap(paddedWidth, height, Bitmap.Config.ARGB_8888)
+                    bitmap.copyPixelsFromBuffer(plane.buffer)
+                    val cropped = if (paddedWidth != width) {
+                        Bitmap.createBitmap(bitmap, 0, 0, width, height)
+                    } else bitmap
                     val dir = outDir ?: File(filesDir, "shots").apply { mkdirs() }
                     dir.mkdirs()
                     val file = File(dir, "shot_${System.currentTimeMillis()}.png")
-                    file.outputStream().use { cropped.compress(Bitmap.CompressFormat.PNG, 90, it) }
-                    lastShot.value = file.absolutePath
-                    image.close()
+                    FileOutputStream(file).use { cropped.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                    lastShotPath = file.absolutePath
                 }
-                runCatching { reader.close() }
-                runCatching { display?.release() }
-                stopSelf()
             }
-        }, 900)
+            runCatching { virtualDisplay.release() }
+            runCatching { reader.close() }
+        }, 700)
     }
 
     override fun onDestroy() {
@@ -135,43 +140,47 @@ class ScreenCaptureService : Service() {
     }
 
     companion object {
-        private const val CHANNEL = "bypass_screens"
-        private const val NOTIFICATION_ID = 4202
-        const val ACTION_START = "com.aibuilt.addanewprofessionaltabtoarinca.bypass.SHOT_START"
-        const val ACTION_CAPTURE = "com.aibuilt.addanewprofessionaltabtoarinca.bypass.SHOT_CAPTURE"
-        const val ACTION_STOP = "com.aibuilt.addanewprofessionaltabtoarinca.bypass.SHOT_STOP"
+        const val CHANNEL = "bypass_capture"
+        const val NOTIFICATION_ID = 4712
+        const val ACTION_START = "com.aibuilt.addanewprofessionaltabtoarinca.CAPTURE_START"
+        const val ACTION_CAPTURE = "com.aibuilt.addanewprofessionaltabtoarinca.CAPTURE_NOW"
+        const val ACTION_STOP = "com.aibuilt.addanewprofessionaltabtoarinca.CAPTURE_STOP"
         const val EXTRA_CODE = "code"
         const val EXTRA_DATA = "data"
         const val EXTRA_DIR = "dir"
 
-        val lastShot = MutableStateFlow<String?>(null)
-
         @Volatile
         var active: Boolean = false
 
-        fun start(context: Context, resultCode: Int, data: Intent, dir: File) {
+        @Volatile
+        var lastShotPath: String? = null
+
+        fun start(context: Context, code: Int, data: Intent, dir: String) {
             val intent = Intent(context, ScreenCaptureService::class.java).apply {
                 action = ACTION_START
-                putExtra(EXTRA_CODE, resultCode)
+                putExtra(EXTRA_CODE, code)
                 putExtra(EXTRA_DATA, data)
-                putExtra(EXTRA_DIR, dir.absolutePath)
+                putExtra(EXTRA_DIR, dir)
             }
-            ContextCompat.startForegroundService(context, intent)
+            runCatching { ContextCompat.startForegroundService(context, intent) }
         }
 
-        fun capture(context: Context, dir: File) {
-            val intent = Intent(context, ScreenCaptureService::class.java).apply {
-                action = ACTION_CAPTURE
-                putExtra(EXTRA_DIR, dir.absolutePath)
-            }
-            ContextCompat.startForegroundService(context, intent)
+        fun capture(context: Context) {
+            val intent = Intent(context, ScreenCaptureService::class.java).apply { action = ACTION_CAPTURE }
+            runCatching { ContextCompat.startForegroundService(context, intent) }
         }
 
         fun stop(context: Context) {
-            ContextCompat.startForegroundService(
-                context,
-                Intent(context, ScreenCaptureService::class.java).apply { action = ACTION_STOP }
-            )
+            val intent = Intent(context, ScreenCaptureService::class.java).apply { action = ACTION_STOP }
+            runCatching { context.startService(intent) }
         }
     }
+}
+
+fun notifyChannel(context: Context, id: String, name: String) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+    val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+    if (manager.getNotificationChannel(id) != null) return
+    val channel = NotificationChannel(id, name, NotificationManager.IMPORTANCE_LOW)
+    manager.createNotificationChannel(channel)
 }
