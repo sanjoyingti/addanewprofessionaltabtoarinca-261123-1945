@@ -1,5 +1,3 @@
-=== ABOUT: The integrity sweep that runs before any paywall work: it removes certificate pinning and hushes the app's own signature checks ===
-```kotlin
 package com.aibuilt.addanewprofessionaltabtoarinca.bypass
 
 import kotlinx.coroutines.Dispatchers
@@ -49,7 +47,7 @@ class Integrity(
     }
 
     /** Points the manifest at the config file, adding the attribute if the app never had one. */
-    suspend fun ensureConfigWired(root: File): PatchPreview = patcher.ensureCleartextOrConfig(root, "network_security_config")
+    suspend fun ensureConfigWired(root: File): PatchPreview = patcher.ensureConfigWired(root, "network_security_config")
 
     /** Makes every boolean signature comparison say "genuine". */
     suspend fun neuterSignatureChecks(root: File): PatchPreview =
@@ -87,10 +85,12 @@ class Integrity(
         val signature = neuterSignatureChecks(root)
         previews.add(signature)
         if (signature.changed.isEmpty()) notes.add("No self-signature check method matched — the app may not check its own signature.")
-        val mitmOut = File(apk.parentFile, "base_mitm.apk")
-        val result = apkMitm(apk, mitmOut)
-        if (result.ok) notes.add("apk-mitm rewritten copy produced at ${mitmOut.name}.")
-        else notes.add("apk-mitm could not run (${result.err.take(120)}); the in-tree pinning rewrite still applies.")
+        if (apk.isFile) {
+            val mitmOut = File(apk.parentFile, "base_mitm.apk")
+            val result = apkMitm(apk, mitmOut)
+            if (result.ok) notes.add("apk-mitm rewritten copy produced at ${mitmOut.name}.")
+            else notes.add("apk-mitm could not run (${result.err.take(120)}); the in-tree pinning rewrite still applies.")
+        }
         log("integrity sweep finished")
         return SweepOutcome(previews, notes)
     }

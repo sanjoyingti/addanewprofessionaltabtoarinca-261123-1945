@@ -1,5 +1,3 @@
-=== ABOUT: Fixed the stray code fences and made the Linux toolkit installer shorter: Java, apktool, JADX, signer and apk-mitm install once and are skipped when already there ===
-```kotlin
 package com.aibuilt.addanewprofessionaltabtoarinca.bypass
 
 import android.content.Context
@@ -74,6 +72,8 @@ class Toolchain(private val context: Context, private val log: suspend (String) 
     fun apkSigner(): String = bin("uber-apk-signer")
     fun apkMitm(): String = bin("apk-mitm")
     fun keytool(): String = bin("keytool")
+    fun zipalign(): String = bin("zipalign")
+    fun apksigner(): String = bin("apksigner")
 
     fun shellCommand(command: String): List<String> =
         if (linuxAvailable() && proot.isFile) {
@@ -105,7 +105,7 @@ class Toolchain(private val context: Context, private val log: suspend (String) 
         ToolStep(
             "apktool", "apktool", "apktool --version",
             listOf(
-                "apt-get install -y aapt zip unzip || true",
+                "apt-get install -y aapt zip unzip zipalign || true",
                 "curl -fsSL https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -o /usr/local/bin/apktool && chmod +x /usr/local/bin/apktool",
                 "curl -fsSL https://github.com/iBotPeaches/Apktool/releases/download/v2.11.1/apktool_2.11.1.jar -o /opt/apktool.jar"
             )
@@ -137,7 +137,7 @@ class Toolchain(private val context: Context, private val log: suspend (String) 
         )
     )
 
-    suspend fun installAll(projectId: String, onProgress: (Float, String) -> Unit): ToolchainResult {
+    suspend fun installAll(projectDir: File, onProgress: (Float, String) -> Unit): ToolchainResult {
         if (!linuxAvailable()) {
             val message = "No Linux under the app's files folder. Install Arin's Linux box first — without it apktool, JADX and the signer cannot run."
             log(message)
@@ -166,9 +166,9 @@ class Toolchain(private val context: Context, private val log: suspend (String) 
             }
             onProgress((index + 1).toFloat() / all.size, "Done with ${step.label}")
         }
-        val keystore = ensureKeystore(context.filesDir.let { File(it, "bypass/projects/$projectId") })
+        val keystore = ensureKeystore(projectDir)
         if (!keystore.first) failed.add("keystore")
-        val ok = failed.isEmpty() || installed.isNotEmpty() || skipped.isNotEmpty()
+        val ok = installed.isNotEmpty() || skipped.isNotEmpty() || failed.isEmpty()
         val message = buildString {
             append(if (ok) "Toolchain ready. " else "Toolchain could not be prepared. ")
             if (installed.isNotEmpty()) append("Installed: ${installed.joinToString(", ")}. ")

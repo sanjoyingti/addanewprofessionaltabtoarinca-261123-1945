@@ -1,5 +1,3 @@
-=== ABOUT: Reads the decoded app and lists every network class, pinning setup, endpoint, paywall and obfuscation marker with a confidence score ===
-```kotlin
 package com.aibuilt.addanewprofessionaltabtoarinca.bypass
 
 import kotlinx.coroutines.Dispatchers
@@ -73,7 +71,6 @@ class Scanner(
             .toList()
         log("scanning ${files.size} file(s)")
 
-        // native library strings, one joined blob per lib
         val nativeStrings = StringBuilder()
         root.walkTopDown().filter { it.isFile && it.extension == "so" }.take(30).forEach { lib ->
             runCatching { nativeStrings.append(bytesToStrings(lib.readBytes())) }

@@ -1,5 +1,3 @@
-=== ABOUT: Finds the billing library and the one method that decides "is this paid", then flips that producer and the stored defaults instead of touching every screen ===
-```kotlin
 package com.aibuilt.addanewprofessionaltabtoarinca.bypass
 
 import kotlinx.coroutines.Dispatchers

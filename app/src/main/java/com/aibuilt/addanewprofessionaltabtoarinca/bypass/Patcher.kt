@@ -1,5 +1,3 @@
-=== ABOUT: Fixed the code fences: the patch engine that previews every change as a diff, repairs the manifest, renames the clone, checks the smali and can inject the Frida rescue hook ===
-```kotlin
 package com.aibuilt.addanewprofessionaltabtoarinca.bypass
 
 import kotlinx.coroutines.Dispatchers
@@ -117,7 +115,7 @@ class Patcher(private val toolchain: Toolchain, private val log: suspend (String
                 start = index
                 signature = line
             } else if (line == ".end method" && start >= 0) {
-                out.add(MethodBlock(start, index, signature, lines.subList(start + 1, index)))
+                out.add(MethodBlock(start, index, signature, ArrayList(lines.subList(start + 1, index))))
                 start = -1
             }
         }
@@ -293,6 +291,9 @@ class Patcher(private val toolchain: Toolchain, private val log: suspend (String
         else before.replaceFirst(Regex("<application\\b"), "<application android:networkSecurityConfig=\"@xml/$configName\"")
         PatchPreview("nsc-manifest", "Point manifest at @xml/$configName", listOf(FileDiff("AndroidManifest.xml", before, after)))
     }
+
+    /** Kept for callers that treat "wire the permissive config" as a cleartext fix. */
+    suspend fun ensureCleartextOrConfig(root: File, configName: String): PatchPreview = ensureConfigWired(root, configName)
 
     suspend fun patchWebViewBridge(root: File): PatchPreview = withContext(Dispatchers.IO) {
         val diffs = ArrayList<FileDiff>()

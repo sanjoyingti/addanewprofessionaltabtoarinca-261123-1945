@@ -1,4 +1,3 @@
-=== FILE: app/src/main/java/com/aibuilt/addanewprofessionaltabtoarinca/bypass/MockServer.kt ===
 package com.aibuilt.addanewprofessionaltabtoarinca.bypass
 
 import kotlinx.coroutines.CoroutineScope
@@ -38,10 +37,10 @@ class MockServer(
                             val reader = BufferedReader(InputStreamReader(client.getInputStream()))
                             val requestLine = reader.readLine().orEmpty()
                             val path = requestLine.split(' ').getOrNull(1) ?: "/"
-                            onRequest("$requestLine")
+                            onRequest(requestLine)
                             val body = canned[path]
                                 ?: canned.entries.firstOrNull { path.contains(it.key) }?.value
-                                ?: canned(canned, path)
+                                ?: defaultBody(path)
                             val bytes = body.toByteArray()
                             val header = "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\n" +
                                 "Content-Length: ${bytes.size}\r\nConnection: close\r\n\r\n"
@@ -67,7 +66,7 @@ class MockServer(
     companion object {
         const val DEFAULT_PORT = 8787
 
-        fun canned(canned: Map<String, String>, path: String): String = when {
+        fun defaultBody(path: String): String = when {
             path.contains("config") ->
                 """{"premium":true,"isPremium":true,"plan":"PRO","isAdult":true,"forceUpdate":false,"minVersionCode":1,"ads":false}"""
             path.contains("entitle") || path.contains("subscri") || path.contains("purchase") ->
